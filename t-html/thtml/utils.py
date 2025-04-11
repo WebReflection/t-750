@@ -70,6 +70,8 @@ def as_node(value):
       node.append(as_node(item))
     return node
   if callable(value):
+    # TODO: this could be a hook pleace for asyncio
+    #       and run to completion before continuing
     return as_node(value())
   return Text(value)
 
@@ -99,4 +101,4 @@ def parse(listeners, template, length, svg):
   if len(updates) != length:
     raise ValueError(f'{len(updates)} updates found, expected {length}')
 
-  return [node, updates]
+  return [fragment, updates]
