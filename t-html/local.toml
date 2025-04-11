@@ -6,5 +6,6 @@ packages = ["dill"]
 
 [files]
 "./thtml/__init__.py" = "./thtml/__init__.py"
+"./thtml/dom.py" = "./thtml/dom.py"
 "./thtml/parser.py" = "./thtml/parser.py"
 "./thtml/utils.py" = "./thtml/utils.py"

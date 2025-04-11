@@ -16,21 +16,35 @@ import dill
 import js
 js.python_listeners = dill.loads(b64decode('{code}'))
 </script>'''
+
   return output
+
 
 data = {"a": 1, "b": 2}
 aria = {"role": "button", "label": "Click me"}
-
 names = ["John", "Jane", "Jim", "Jill"]
 
+
+# listener example
 def on_click(event):
   import js
   js.alert(event.type)
 
+
+# Component example
+def Component(props, children):
+  return html(t'''
+    <div a={props['a']} b={props['b']}>
+      {children}
+    </div>
+  ''')
+
+
+# SSR example
 document.body.innerHTML = render(passthrough, html(t'''
   <div>
     <!-- boolean attributes hints: try with True -->
-    <h1 ?hidden={False}>Hello, PEP750 SSR!</h1>
+    <h1 hidden={False}>Hello, PEP750 SSR!</h1>
     <!-- automatic quotes with safe escapes -->
     <p class={'test & "test"'}>
       Some random number: {random()}
@@ -45,6 +59,10 @@ document.body.innerHTML = render(passthrough, html(t'''
       <!-- preseved XML/SVG self closing nature -->
       {svg(t'<rect width="200" height="100" rx="20" ry="20" fill="blue" />')}
     </svg>
+    <!-- components -->
+    <{Component} a="1" b={2}>
+      <p>Hello Components!</p>
+    <//>
     <ul>
       <!-- lists within parts of the layout -->
       {[html(t"<li>{name}</li>") for name in names]}

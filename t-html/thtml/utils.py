@@ -1,148 +1,102 @@
-from html import escape
-from random import random
-from .parser import instrument
-import re
-
-prefix = 't🐍' + str(random())[2:5]
-
-rename = re.compile(
-  r'([^\s>]+)[\s\S]*$'
-)
-
-interpolation = re.compile(
-  f'(<!--{prefix}(\\d+)-->|\\s*{prefix}(\\d+)=([^\\s>]))'
-)
-
-def attribute(name, quote, value):
-  return f" {name}={quote}{escape(str(value))}{quote}"
+from .parser import instrument, prefix
+from .dom import Node, Text, Fragment, parse as domify
 
 
-def get_value(value):
-  if isinstance(value, (bool, int, float, Hole)):
-    return str(value)
-  if isinstance(value, (list, tuple)):
-    return ''.join([get_value(item) for item in value])
-  if callable(value):
-    return get_value(value())
-  return '' if value == None else escape(str(value))
-
-
-def as_aria(pre, quote):
+def as_attribute(attributes, listeners, key, name):
   def aria(value):
+    del attributes[key]
     values = []
     for k, v in value.items():
-      values.append(attribute(k if k == 'role' else f'aria-{k.lower()}', quote, v))
-    return pre + ''.join(values)
-  
-  return aria
+      attributes[k if k == 'role' else f'aria-{k.lower()}'] = v
 
+  def attribute(value):
+    del attributes[key]
+    attributes[name] = value
 
-def as_attribute(pre, name, quote):
-  return lambda value: pre if value == None else (pre + attribute(name, quote, value))
-
-
-def as_boolean(pre, name):
-  attr = f' {name}'
-  return lambda value: (pre + attr) if value else pre
-
-
-def as_dataset(pre, quote):
   def dataset(value):
+    del attributes[key]
     values = []
     for k, v in value.items():
-      if v is not None:
-        values.append(attribute(f'data-{k.replace("_", "-")}', '"', v))
-    return pre + ''.join(values)
+      attributes[f'data-{k.replace("_", "-")}'] = v
 
-  return dataset
-
-
-def as_generic(pre, name, quote):
-  def generic(value):
-    if value != None and value != False:
-      return (pre + f' {lower}') if value == True else (pre + attribute(name, quote, value))
-    return pre
-
-  return generic
-
-
-def as_value(pre):
-  return lambda value: (pre + get_value(value))
-
-
-def as_listener(pre, quote, listeners, name):
   def listener(value):
+    del attributes[key]
     if value in listeners:
       i = listeners.index(value)
     else:
       i = len(listeners)
       listeners.append(value)
-    return pre + attribute(name, quote, f'self.python_listeners?.[{i}].call(this,event)')
+    attributes[name] = f'self.python_listeners?.[{i}].call(this,event)'
 
-  return listener
+  if name[0] == '@':
+    name = 'on' + name[1:].lower()
+    return listener
+  if name == 'aria':
+    return aria
+  elif name == 'data':
+    return dataset
+  else:
+    return attribute
 
+
+def as_comment(node):
+  parent = node.parent
+  nodes = parent.nodes
+  index = nodes.index(node)
+  def comment(value):
+    nodes[index] = as_node(value)
+
+  return comment
+
+
+def as_component(updates, node):
+  parent = node.parent
+  nodes = parent.nodes
+  index = nodes.index(node)
+  def component(value):
+    def later():
+      nodes[index] = value(node.attributes, node.nodes)
+    updates.append(later)
+
+  return component
+
+
+def as_node(value):
+  if isinstance(value, Node):
+    return value
+  if isinstance(value, (list, tuple)):
+    node = Fragment()
+    for item in value:
+      node.append(as_node(item))
+    return node
+  if callable(value):
+    return as_node(value())
+  return Text(value)
+
+
+def set_updates(node, listeners, updates):
+  if node.type == node.ELEMENT:
+    if node.name == prefix:
+      updates.append(as_component(updates, node))
+
+    attributes = node.attributes
+    for key, name in attributes.items():
+      if key.startswith(prefix):
+        updates.append(as_attribute(attributes, listeners, key, name))
+    for child in node.nodes:
+      set_updates(child, listeners, updates)
+
+  elif node.type == node.COMMENT and node.data == prefix:
+    updates.append(as_comment(node))
 
 
 def parse(listeners, template, length, svg):
-  html = instrument(template, prefix, svg)
   updates = []
-  i = 0
-  for match in re.finditer(interpolation, html):
-    index = match.start()
-    pre = html[i:index]
-    i = match.end()
-
-    if match.group(2):
-      updates.append(as_value(pre))
-    else:
-      name = ''
-      quote = match.group(4)
-      if quote == '"' or quote == "'":
-        next = html.index(quote, i)
-        name = html[i:next]
-        i = next + 1
-      else:
-        i -= 1
-        name = re.sub(rename, r'\1', html[i:])
-        i += len(name)
-        quote = '"'
-
-      if name == 'aria':
-        updates.append(as_aria(pre, quote))
-      elif name == 'data':
-        updates.append(as_dataset(pre, quote))
-      elif name[0] == '?':
-        updates.append(as_boolean(pre, name[1:].lower()))
-      elif name[0] == '@':
-        updates.append(as_listener(pre, quote, listeners, 'on' + name[1:].lower()))
-      # TBD: is this too much? valid for .data or .dataset though
-      elif name[0] == '.':
-        lower = name[1:].lower()
-        if lower == 'dataset':
-          updates.append(as_dataset(pre, quote))
-        else:
-          updates.append(as_generic(pre, lower, quote))
-      else:
-        updates.append(as_attribute(pre, name, quote))
-
+  content = instrument(template, prefix, svg)
+  fragment = domify(content, svg)
+  for node in fragment.nodes:
+    set_updates(node, listeners, updates)
   if len(updates) != length:
     raise ValueError(f'{len(updates)} updates found, expected {length}')
 
-  if length:
-    last = updates[length - 1]
-    chunk = html[i:]
-    updates[length - 1] = lambda value: (last(value) + chunk)
-  else:
-    updates.append(lambda: html)
-  return updates
-
-
-class Hole:
-  def __init__(self, values: list):
-    self.values = values
-
-  def __str__(self):
-    return ''.join(self.values)
-
-  def __repr__(self):
-    return f"Hole({self.__str__()})"
+  return [node, updates]

@@ -1,4 +1,4 @@
-from .utils import Hole, parse
+from .utils import parse
 
 parsed = {}
 listeners = []
@@ -13,13 +13,20 @@ def _util(svg):
 
     length = len(values)
 
-    if template in parsed:
-      updates = parsed[template]
+    # TODO: this is broken right now
+    if False or template in parsed:
+      node, updates = parsed[template]
     else:
-      updates = parse(listeners, template, length, svg)
-      parsed[template] = updates
+      node, updates = parse(listeners, template, length, svg)
+      parsed[template] = [node, updates]
 
-    return Hole(length and [updates[i](values[i]) for i in range(length)] or [updates[0]()])
+    for i in range(length):
+      updates[i](values[i])
+
+    for i in range(length, len(updates)):
+      updates[i]()
+
+    return node
 
   return fn
 

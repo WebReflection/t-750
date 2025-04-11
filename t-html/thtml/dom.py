@@ -32,7 +32,7 @@ class Text(Node):
     self.data = data
 
   def __str__(self):
-    return escape(self.data)
+    return escape(str(self.data))
 
 
 class Comment(Node):
@@ -41,7 +41,7 @@ class Comment(Node):
     self.data = data
 
   def __str__(self):
-    return f"<!--{escape(self.data)}-->"
+    return f"<!--{escape(str(self.data))}-->"
 
 
 class Parent(Node):
@@ -50,10 +50,9 @@ class Parent(Node):
     self.nodes = []
     self.parent = None
 
-  def append(self, *nodes):
-    for node in nodes:
-      node.parent = self
-      self.nodes.append(node)
+  def append(self, node):
+    node.parent = self
+    self.nodes.append(node)
 
   def replace(self, old_node, new_node):
     self.nodes[self.nodes.index(old_node)] = new_node
@@ -71,7 +70,12 @@ class Element(Parent):
   def __str__(self):
     html = f"<{self.name}"
     for key, value in self.attributes.items():
-      html += f" {key}=\"{escape(value)}\""
+      if value != None:
+        if isinstance(value, bool):
+          if value:
+            html += f" {key}"
+        else:
+          html += f" {key}=\"{escape(str(value))}\""
     if len(self.nodes) > 0:
       html += ">"
       for child in self.nodes:

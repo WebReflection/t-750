@@ -1,12 +1,15 @@
 import re
+from random import random
 
 VOID_ELEMENTS = re.compile(
   r'^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$',
   re.IGNORECASE
 )
 
+prefix = 't🐍' + str(random())[2:5]
+
 elements = re.compile(
-  r'<([a-zA-Z0-9]+[a-zA-Z0-9:._-]*)([^>]*?)(\/?)>',
+  '<(\x01|[a-zA-Z0-9]+[a-zA-Z0-9:._-]*)([^>]*?)(/?)>',
 )
 
 attributes = re.compile(
@@ -33,6 +36,8 @@ def as_closing(name, xml, self_closing):
 def instrument(template, prefix, xml):
   def pin(match):
     name = match.group(1)
+    if name == '\x01':
+      name = prefix
     attrs = match.group(2)
     self_closing = match.group(3)
     return f'<{
@@ -51,7 +56,7 @@ def instrument(template, prefix, xml):
   i = 0
   return re.sub(
     holes,
-    lambda match: f'<!--{point()}-->' if match.group(0) == '\x01' else point(),
+    lambda match: f'<!--{prefix}-->' if match.group(0) == '\x01' else point(),
     re.sub(
       elements,
       pin,
