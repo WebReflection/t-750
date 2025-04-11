@@ -21,9 +21,8 @@ class Node:
   FRAGMENT = 11
   # NOTATION = 12
 
-  def __init__(self, type, xml=False):
+  def __init__(self, type):
     self.type = type
-    self.xml = xml
 
 
 class Text(Node):
@@ -45,8 +44,8 @@ class Comment(Node):
 
 
 class Parent(Node):
-  def __init__(self, type, xml=False):
-    super().__init__(type, xml)
+  def __init__(self, type):
+    super().__init__(type)
     self.nodes = []
     self.parent = None
 
@@ -62,10 +61,11 @@ class Parent(Node):
 
 class Element(Parent):
   def __init__(self, name, xml=False):
-    super().__init__(Node.ELEMENT, xml)
+    super().__init__(Node.ELEMENT)
     self.attributes = {}
     self.nodes = []
     self.name = name
+    self.xml = xml
 
   def __str__(self):
     html = f"<{self.name}"
@@ -91,16 +91,16 @@ class Element(Parent):
 
 
 class Fragment(Parent):
-  def __init__(self, xml=False):
-    super().__init__(Node.FRAGMENT, xml)
+  def __init__(self):
+    super().__init__(Node.FRAGMENT)
 
   def __str__(self):
     return "".join(str(node) for node in self.nodes)
 
 
 class DocumentType(Node):
-  def __init__(self, data, xml=False):
-    super().__init__(Node.DOCUMENT_TYPE, xml)
+  def __init__(self, data):
+    super().__init__(Node.DOCUMENT_TYPE)
     self.data = data
 
   def __str__(self):
@@ -111,14 +111,14 @@ class DOMParser(HTMLParser):
   def __init__(self, xml=False):
     super().__init__()
     self.xml = xml
-    self.node = Fragment(xml)
+    self.node = Fragment()
 
   def handle_starttag(self, tag, attrs):
     element = Element(tag, self.xml)
     self.node.append(element)
     self.node = element
-    for attr in attrs:
-      element.attributes[attr[0]] = attr[1]
+    for name, value in attrs:
+      element.attributes[name] = value
 
   def handle_endtag(self, tag):
     if self.node.parent:
