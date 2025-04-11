@@ -47,13 +47,14 @@ document.body.innerHTML = render(passthrough, html(t'''
     <h1 hidden={False}>Hello, PEP750 SSR!</h1>
     <!-- automatic quotes with safe escapes -->
     <p class={'test & "test"'}>
+      <!-- sanitized content out of the box -->
       Some random number: {random()}
     </p>
-    <!-- sef closing non void tags -->
+    <!-- autofix for self closing non void tags -->
     <textarea placeholder={random()} />
-    <!-- ignored void elements -->
     <!-- special attributes cases + @click special handler -->
     <div data={data} aria={aria} @click={on_click} />
+    <!-- ignored void elements -->
     <hr />
     <svg>
       <!-- preseved XML/SVG self closing nature -->

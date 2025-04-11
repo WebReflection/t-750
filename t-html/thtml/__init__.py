@@ -23,7 +23,7 @@ def _util(svg):
     for i in range(length):
       updates[i](values[i])
 
-    for i in range(length, len(updates)):
+    for i in range(len(updates) - 1, length - 1, -1):
       updates[i]()
 
     return node
