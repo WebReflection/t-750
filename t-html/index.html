@@ -10,6 +10,9 @@
       document.write(`<script type="py" src="./main.py" config="./${location.hostname === 'localhost' ? 'local' : 'main'}.toml"><\x2fscript>`);
     </script>
     <style>
+      [aria-label] {
+        cursor: pointer;
+      }
       [aria-label]::before {
         content: attr(aria-label);
       }

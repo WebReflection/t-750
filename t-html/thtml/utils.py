@@ -70,7 +70,20 @@ def as_value(pre):
   return lambda value: (pre + get_value(value))
 
 
-def parse(template, length, svg):
+def as_listener(pre, quote, listeners, name):
+  def listener(value):
+    if value in listeners:
+      i = listeners.index(value)
+    else:
+      i = len(listeners)
+      listeners.append(value)
+    return pre + attribute(name, quote, f'self.python_listeners?.[{i}].call(this,event)')
+
+  return listener
+
+
+
+def parse(listeners, template, length, svg):
   html = instrument(template, prefix, svg)
   updates = []
   i = 0
@@ -100,6 +113,8 @@ def parse(template, length, svg):
         updates.append(as_dataset(pre, quote))
       elif name[0] == '?':
         updates.append(as_boolean(pre, name[1:].lower()))
+      elif name[0] == '@':
+        updates.append(as_listener(pre, quote, listeners, 'on' + name[1:].lower()))
       # TBD: is this too much? valid for .data or .dataset though
       elif name[0] == '.':
         lower = name[1:].lower()

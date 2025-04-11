@@ -2,14 +2,30 @@ from thtml import render, html, svg
 from js import document
 from random import random
 
-def passthrough(value):
+def passthrough(value, listeners):
   print(str(value))
-  return str(value)
+  output = str(value)
+  if len(listeners) > 0:
+    from base64 import b64encode
+    import dill
+    code = b64encode(dill.dumps(listeners)).decode('utf-8')
+    listeners.clear()
+    output += f'''<script type="py">
+from base64 import b64decode
+import dill
+import js
+js.python_listeners = dill.loads(b64decode('{code}'))
+</script>'''
+  return output
 
 data = {"a": 1, "b": 2}
 aria = {"role": "button", "label": "Click me"}
 
 names = ["John", "Jane", "Jim", "Jill"]
+
+def on_click(event):
+  import js
+  js.alert(event.type)
 
 document.body.innerHTML = render(passthrough, html(t'''
   <div>
@@ -22,8 +38,8 @@ document.body.innerHTML = render(passthrough, html(t'''
     <!-- sef closing non void tags -->
     <textarea placeholder={random()} />
     <!-- ignored void elements -->
-    <!-- special attributes cases -->
-    <div data={data} aria={aria} />
+    <!-- special attributes cases + @click special handler -->
+    <div data={data} aria={aria} @click={on_click} />
     <hr />
     <svg>
       <!-- preseved XML/SVG self closing nature -->

@@ -1,6 +1,7 @@
 from .utils import Hole, parse
 
 parsed = {}
+listeners = []
 
 def _util(svg):
   def fn(t):
@@ -15,7 +16,7 @@ def _util(svg):
     if template in parsed:
       updates = parsed[template]
     else:
-      updates = parse(template, length, svg)
+      updates = parse(listeners, template, length, svg)
       parsed[template] = updates
 
     return Hole(length and [updates[i](values[i]) for i in range(length)] or [updates[0]()])
@@ -23,7 +24,7 @@ def _util(svg):
   return fn
 
 def render(where, what):
-  return where(what() if callable(what) else what)
+  return where(what() if callable(what) else what, listeners)
 
 html = _util(False)
 svg = _util(True)

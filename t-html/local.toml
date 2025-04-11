@@ -2,6 +2,8 @@ name = "PEP 750"
 
 interpreter = "https://koxudaxi.github.io/pyodide/tstrings/pyodide.mjs"
 
+packages = ["dill"]
+
 [files]
 "./thtml/__init__.py" = "./thtml/__init__.py"
 "./thtml/parser.py" = "./thtml/parser.py"
