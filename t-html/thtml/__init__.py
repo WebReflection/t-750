@@ -14,7 +14,7 @@ def _util(svg):
     length = len(values)
 
     # TODO: this is broken right now
-    if False or template in parsed:
+    if False and template in parsed:
       node, updates = parsed[template]
     else:
       node, updates = parse(listeners, template, length, svg)
