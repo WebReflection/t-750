@@ -5,7 +5,6 @@ from .dom import Node, Text, Fragment, parse as domify
 def as_attribute(attributes, listeners, key, name):
   def aria(value):
     del attributes[key]
-    values = []
     for k, v in value.items():
       attributes[k if k == 'role' else f'aria-{k.lower()}'] = v
 
@@ -26,7 +25,7 @@ def as_attribute(attributes, listeners, key, name):
     else:
       i = len(listeners)
       listeners.append(value)
-    attributes[name] = f'self.python_listeners?.[{i}].call(this,event)'
+    attributes[name] = f'self.python_listeners?.[{i}](event)'
 
   if name[0] == '@':
     name = 'on' + name[1:].lower()
@@ -40,22 +39,22 @@ def as_attribute(attributes, listeners, key, name):
 
 
 def as_comment(node):
-  parent = node.parent
-  nodes = parent.nodes
-  index = nodes.index(node)
+  parentNode = node.parentNode
+  childNodes = parentNode.childNodes
+  index = childNodes.index(node)
   def comment(value):
-    nodes[index] = as_node(value)
+    childNodes[index] = as_node(value)
 
   return comment
 
 
 def as_component(updates, node):
-  parent = node.parent
-  nodes = parent.nodes
-  index = nodes.index(node)
+  parentNode = node.parentNode
+  childNodes = parentNode.childNodes
+  index = childNodes.index(node)
   def component(value):
     def later():
-      nodes[index] = value(node.attributes, node.nodes)
+      childNodes[index] = value(node.attributes, node.childNodes)
     updates.append(later)
 
   return component
@@ -67,7 +66,7 @@ def as_node(value):
   if isinstance(value, (list, tuple)):
     node = Fragment()
     for item in value:
-      node.append(as_node(item))
+      node.appendChild(as_node(item))
     return node
   if callable(value):
     # TODO: this could be a hook pleace for asyncio
@@ -85,7 +84,7 @@ def set_updates(node, listeners, updates):
     for key, name in attributes.items():
       if key.startswith(prefix):
         updates.append(as_attribute(attributes, listeners, key, name))
-    for child in node.nodes:
+    for child in node.childNodes:
       set_updates(child, listeners, updates)
 
   elif node.type == node.COMMENT and node.data == prefix:
@@ -96,7 +95,7 @@ def parse(listeners, template, length, svg):
   updates = []
   content = instrument(template, prefix, svg)
   fragment = domify(content, svg)
-  for node in fragment.nodes:
+  for node in fragment.childNodes:
     set_updates(node, listeners, updates)
   if len(updates) != length:
     raise ValueError(f'{len(updates)} updates found, expected {length}')

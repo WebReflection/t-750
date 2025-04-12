@@ -46,24 +46,19 @@ class Comment(Node):
 class Parent(Node):
   def __init__(self, type):
     super().__init__(type)
-    self.nodes = []
-    self.parent = None
+    self.childNodes = []
+    self.parentNode = None
 
-  def append(self, node):
-    node.parent = self
-    self.nodes.append(node)
-
-  def replace(self, old_node, new_node):
-    self.nodes[self.nodes.index(old_node)] = new_node
-    old_node.parent = None
-    new_node.parent = self
+  def appendChild(self, node):
+    node.parentNode = self
+    self.childNodes.append(node)
 
 
 class Element(Parent):
   def __init__(self, name, xml=False):
     super().__init__(Node.ELEMENT)
     self.attributes = {}
-    self.nodes = []
+    self.childNodes = []
     self.name = name
     self.xml = xml
 
@@ -76,9 +71,9 @@ class Element(Parent):
             html += f" {key}"
         else:
           html += f" {key}=\"{escape(str(value))}\""
-    if len(self.nodes) > 0:
+    if len(self.childNodes) > 0:
       html += ">"
-      for child in self.nodes:
+      for child in self.childNodes:
         html += str(child)
       html += f"</{self.name}>"
     elif self.xml:
@@ -95,7 +90,7 @@ class Fragment(Parent):
     super().__init__(Node.FRAGMENT)
 
   def __str__(self):
-    return "".join(str(node) for node in self.nodes)
+    return "".join(str(node) for node in self.childNodes)
 
 
 class DocumentType(Node):
@@ -115,26 +110,26 @@ class DOMParser(HTMLParser):
 
   def handle_starttag(self, tag, attrs):
     element = Element(tag, self.xml)
-    self.node.append(element)
+    self.node.appendChild(element)
     self.node = element
     for name, value in attrs:
       element.attributes[name] = value
 
   def handle_endtag(self, tag):
-    if self.node.parent:
-      self.node = self.node.parent
+    if self.node.parentNode:
+      self.node = self.node.parentNode
 
   def handle_data(self, data):
-    self.node.append(Text(data))
+    self.node.appendChild(Text(data))
 
   def handle_comment(self, data):
     if data == '/':
       self.handle_endtag(self.node.name)
     else:
-      self.node.append(Comment(data))
+      self.node.appendChild(Comment(data))
 
   def handle_decl(self, data):
-    self.node.append(DocumentType(data))
+    self.node.appendChild(DocumentType(data))
 
   def unknown_decl(self, data):
     raise Exception(f"Unknown declaration: {data}")
