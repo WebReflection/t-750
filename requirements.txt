@@ -1,0 +1,3 @@
+beautifulsoup4
+pytest
+git+https://github.com/davepeck/black@pep750-support

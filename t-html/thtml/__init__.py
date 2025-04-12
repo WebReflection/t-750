@@ -1,9 +1,12 @@
+from typing import Callable
+
+from .dom import Fragment
 from .utils import parse
 
 parsed = {}
 listeners = []
 
-def _util(svg):
+def _util(svg) -> Callable[[object], Fragment]:
   def fn(t):
     template = t.args[0::2]
 
