@@ -2,7 +2,6 @@ from .utils import _Attribute, _Comment, _parse
 from .dom import COMMENT, DOCUMENT_TYPE, TEXT, ELEMENT, FRAGMENT
 from .dom import Node, Comment, DocumentType, Text, Element, Fragment, DOMParser, parse, _clone
 
-
 _parsed = {}
 _listeners = []
 
