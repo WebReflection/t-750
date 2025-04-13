@@ -5,7 +5,7 @@ Port the code from viewdom.examples.static_string.
 import pytest
 
 from thtml import html
-from thtml.dom import Element
+from thtml.dom import Element, DocumentType
 
 
 def test_string_literal():
@@ -56,3 +56,19 @@ def test_child_nodes():
     em = span.nodes[1]
     assert em.name == "em"
     assert str(em) == "<em>!</em>"
+
+
+def test_doctype():
+    """Sometimes it is hard to get a DOCTYPE in to the resulting output."""
+    fragment = html(t"<!DOCTYPE html>\n<div>Hello World</div>")
+    doctype = fragment.nodes[0]
+    assert isinstance(doctype, DocumentType)
+    assert str(fragment) == "<!DOCTYPE html>\n<div>Hello World</div>"
+
+
+def test_reducing_boolean():
+    """collapse truthy-y values into simplified HTML attributes."""
+    fragment = html(t"<div editable={True}>Hello World</div>")
+    div: Element = fragment.nodes[0]
+    assert div.attributes == {"editable": True}
+    assert str(fragment) == "<div editable>Hello World</div>"
