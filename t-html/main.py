@@ -1,21 +1,25 @@
 from thtml import render, html, svg
-from js import document
 from random import random
+
 
 def passthrough(value, listeners):
   print(str(value))
   output = str(value)
   if len(listeners) > 0:
     from base64 import b64encode
-    import dill
-    code = b64encode(dill.dumps(listeners)).decode('utf-8')
-    listeners.clear()
-    output += f'''<script type="py">
+    try:
+      import dill
+      code = b64encode(dill.dumps(listeners)).decode('utf-8')
+      output += f'''<script type="py">
 from base64 import b64decode
 import dill
 import js
 js.python_listeners = dill.loads(b64decode('{code}'))
 </script>'''
+    except Exception as e:
+      pass
+  
+  listeners.clear()
 
   return output
 
@@ -41,7 +45,7 @@ def Component(props, children):
 
 
 # SSR example
-document.body.innerHTML = render(passthrough, html(t'''
+content = render(passthrough, html(t'''
   <div>
     <!-- boolean attributes hints: try with True -->
     <h1 hidden={False}>Hello, PEP750 SSR!</h1>
@@ -70,3 +74,9 @@ document.body.innerHTML = render(passthrough, html(t'''
     </ul>
   </div>
 '''))
+
+try:
+  from js import document
+  document.body.innerHTML = content
+except Exception as e:
+  pass
