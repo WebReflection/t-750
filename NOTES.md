@@ -32,3 +32,5 @@ rendered view data and rendered component data in a cache and not re-calculate o
 build. (Longer term: the cache is SQLite, the tree is JSON, and I can index all the nodes in the site, to quickly find
 and patch them with updates.)
 
+Having this structure would also allow middleware of tooling for result processing.
+
