@@ -4,11 +4,6 @@
     <title>PEP750</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <link rel="stylesheet" href="https://pyscript.net/releases/2025.3.1/core.css">
-    <script type="module" src="https://pyscript.net/releases/2025.3.1/core.js"></script>
-    <script>
-      document.write(`<script type="py" src="./main.py" config="./${location.hostname === 'localhost' ? 'local' : 'main'}.toml"><\x2fscript>`);
-    </script>
     <style>
       [aria-label] {
         cursor: pointer;
@@ -17,6 +12,20 @@
         content: attr(aria-label);
       }
     </style>
+    <script type="module">
+      const config = `./${location.hostname === 'localhost' ? 'local' : 'main'}.toml`;
+      const script = Object.assign(
+        document.createElement('script'),
+        {
+          type: 'py',
+          src: './main.py',
+        },
+      );
+      script.setAttribute('config', config);
+      document.head.appendChild(script);
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2025.3.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2025.3.1/core.js"></script>
 </head>
 <body></body>
 </html>
