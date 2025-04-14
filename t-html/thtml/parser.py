@@ -25,9 +25,10 @@ def as_attribute(match):
 
 def as_closing(name, xml, self_closing):
   if len(self_closing) > 0:
-    if xml or re.match(VOID_ELEMENTS, name):
+    if xml:
       return ' /'
-    return f'></{name}'
+    if not re.match(VOID_ELEMENTS, name):
+      return f'></{name}'
   return ''
 
 # \x01 Node.ELEMENT_NODE

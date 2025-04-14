@@ -58,7 +58,7 @@ content = render(passthrough, html(t'''
     <textarea placeholder={random()} />
     <!-- special attributes cases + @click special handler -->
     <div data={data} aria={aria} @click={on_click} />
-    <!-- ignored void elements -->
+    <!-- sanitized void elements -->
     <hr />
     <svg>
       <!-- preseved XML/SVG self closing nature -->
