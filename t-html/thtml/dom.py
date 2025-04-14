@@ -2,6 +2,9 @@ from html.parser import HTMLParser
 from html import escape, unescape
 import re
 
+# TODO: style,script,textarea,title,xmp are nodes which content is not escaped
+#       and it cannot contain interpolations right now but these need to be handled
+
 VOID_ELEMENTS = re.compile(
   r'^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$',
   re.IGNORECASE
@@ -28,10 +31,10 @@ class Node:
 
   def replaceWith(self, node):
     parentNode = self.parentNode
-    if parentNode:
-      parentNode.childNodes[parentNode.childNodes.index(self)] = node
-      node.parentNode = parentNode
-      self.parentNode = None
+    index = parentNode.childNodes.index(self)
+    parentNode.childNodes[index] = node
+    node.parentNode = parentNode
+    self.parentNode = None
 
 
 class Comment(Node):
@@ -67,12 +70,14 @@ class Parent(Node):
     self.childNodes = []
 
   def appendChild(self, node):
-    parentNode = node.parentNode
-    if parentNode:
-      parentNode.childNodes.remove(node)
     self.childNodes.append(node)
     node.parentNode = self
     return node
+
+  def replaceChildren(self, *nodes):
+    for node in nodes:
+      self.childNodes.append(node)
+      node.parentNode = self
 
 
 class Element(Parent):
@@ -128,8 +133,9 @@ class DOMParser(HTMLParser):
       element.attributes[name] = value
 
   def handle_endtag(self, tag):
-    if self.node.parentNode:
-      self.node = self.node.parentNode
+    parentNode = self.node.parentNode
+    if parentNode:
+      self.node = parentNode
 
   def handle_data(self, data):
     self.node.appendChild(Text(data))

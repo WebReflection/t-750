@@ -50,8 +50,8 @@ def as_node(value):
     return value
   if isinstance(value, (list, tuple)):
     node = Fragment()
-    for child in value[:]:
-      node.appendChild(as_node(child))
+    node.replaceChildren(*value)
+    value.clear()
     return node
   if callable(value):
     # TODO: this could be a hook pleace for asyncio
