@@ -3,7 +3,7 @@ from random import random
 
 
 def passthrough(value, listeners):
-  print(str(value))
+  print(str(value.cloneNode(True)))
   output = str(value)
   if len(listeners) > 0:
     from base64 import b64encode

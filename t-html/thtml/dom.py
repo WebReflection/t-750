@@ -45,6 +45,9 @@ class Comment(Node):
   def __str__(self):
     return f"<!--{escape(str(self.data))}-->"
 
+  def cloneNode(self, deep=False):
+    return Comment(self.data)
+
 
 class DocumentType(Node):
   def __init__(self, data):
@@ -54,6 +57,9 @@ class DocumentType(Node):
   def __str__(self):
     return f"<!{self.data}>"
 
+  def cloneNode(self, deep=False):
+    return DocumentType(self.data)
+
 
 class Text(Node):
   def __init__(self, data):
@@ -62,6 +68,9 @@ class Text(Node):
 
   def __str__(self):
     return escape(str(self.data))
+
+  def cloneNode(self, deep=False):
+    return Text(self.data)
 
 
 class Parent(Node):
@@ -110,6 +119,13 @@ class Element(Parent):
         html += "</" + self.name + ">"
     return html
 
+  def cloneNode(self, deep=False):
+    element = Element(self.name, self.xml)
+    element.attributes = self.attributes.copy()
+    if deep:
+      element.replaceChildren(*[child.cloneNode(deep) for child in self.childNodes])
+    return element
+
 
 class Fragment(Parent):
   def __init__(self):
@@ -117,6 +133,12 @@ class Fragment(Parent):
 
   def __str__(self):
     return "".join(str(node) for node in self.childNodes)
+
+  def cloneNode(self, deep=False):
+    fragment = Fragment()
+    if deep:
+      fragment.replaceChildren(*[child.cloneNode(deep) for child in self.childNodes])
+    return fragment
 
 
 class DOMParser(HTMLParser):

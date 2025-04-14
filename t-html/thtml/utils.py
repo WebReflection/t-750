@@ -41,7 +41,7 @@ def as_comment(node):
   return lambda value: node.replaceWith(as_node(value))
 
 
-def as_component(updates, node):
+def as_component(node, updates):
   return lambda value: updates.append(lambda: node.replaceWith(value(node.attributes, node.childNodes)))
 
 
@@ -63,7 +63,7 @@ def as_node(value):
 def set_updates(node, listeners, updates):
   if node.type == node.ELEMENT:
     if node.name == prefix:
-      updates.append(as_component(updates, node))
+      updates.append(as_component(node, updates))
 
     attributes = node.attributes
     for key, name in attributes.items():
