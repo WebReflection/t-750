@@ -60,6 +60,6 @@ def instrument(template, prefix, xml):
     re.sub(
       elements,
       pin,
-      '\x01'.join(template).strip()
+      '\x01'.join(template).strip().replace('</>', '<//>')
     )
   )
