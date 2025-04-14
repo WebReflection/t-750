@@ -1,4 +1,4 @@
-from .utils import parse
+from .utils import Attribute, Comment, Component, parse
 
 parsed = {}
 listeners = []
@@ -13,18 +13,36 @@ def _util(svg):
 
     length = len(values)
 
-    # TODO: this is broken right now
-    if False and template in parsed:
-      node, updates = parsed[template]
-    else:
-      node, updates = parse(listeners, template, length, svg)
-      parsed[template] = [node, updates]
+    if not template in parsed:
+      parsed[template] = parse(listeners, template, length, svg)
+
+    content, updates = parsed[template]
+
+    node = content.cloneNode(True)
+    changes = []
+    path = None
+    child = None
+    i = 0
+
+    for update in updates:
+      if path != update.path:
+        path = update.path
+        child = node
+        for index in path:
+          child = child.childNodes[index]
+
+      if isinstance(update.value, Attribute):
+        changes.append(update.value(child, listeners))
+      elif isinstance(update.value, Comment):
+        changes.append(update.value(child))
+      else:
+        changes.append(update.value(child, changes))
 
     for i in range(length):
-      updates[i](values[i])
+      changes[i](values[i])
 
-    for i in range(len(updates) - 1, length - 1, -1):
-      updates[i]()
+    for i in range(len(changes) - 1, length - 1, -1):
+      changes[i]()
 
     return node
 

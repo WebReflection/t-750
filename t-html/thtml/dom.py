@@ -25,8 +25,8 @@ class Node:
   FRAGMENT = 11
   # NOTATION = 12
 
-  def __init__(self, type):
-    self.type = type
+  def __init__(self, nodeType):
+    self.nodeType = nodeType
     self.parentNode = None
 
   def replaceWith(self, node):
@@ -74,8 +74,8 @@ class Text(Node):
 
 
 class Parent(Node):
-  def __init__(self, type):
-    super().__init__(type)
+  def __init__(self, nodeType):
+    super().__init__(nodeType)
     self.childNodes = []
 
   def appendChild(self, node):
