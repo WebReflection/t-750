@@ -1,11 +1,12 @@
 from html.parser import HTMLParser
-from html import escape
+from html import escape, unescape
 import re
 
 VOID_ELEMENTS = re.compile(
   r'^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$',
   re.IGNORECASE
 )
+
 
 class Node:
   ELEMENT = 1
@@ -23,15 +24,14 @@ class Node:
 
   def __init__(self, type):
     self.type = type
+    self.parentNode = None
 
-
-class Text(Node):
-  def __init__(self, data):
-    super().__init__(Node.TEXT)
-    self.data = data
-
-  def __str__(self):
-    return escape(str(self.data))
+  def replaceWith(self, node):
+    parentNode = self.parentNode
+    if parentNode:
+      parentNode.childNodes[parentNode.childNodes.index(self)] = node
+      node.parentNode = parentNode
+      self.parentNode = None
 
 
 class Comment(Node):
@@ -43,22 +43,42 @@ class Comment(Node):
     return f"<!--{escape(str(self.data))}-->"
 
 
+class DocumentType(Node):
+  def __init__(self, data):
+    super().__init__(Node.DOCUMENT_TYPE)
+    self.data = data
+
+  def __str__(self):
+    return f"<!{self.data}>"
+
+
+class Text(Node):
+  def __init__(self, data):
+    super().__init__(Node.TEXT)
+    self.data = data
+
+  def __str__(self):
+    return escape(str(self.data))
+
+
 class Parent(Node):
   def __init__(self, type):
     super().__init__(type)
     self.childNodes = []
-    self.parentNode = None
 
   def appendChild(self, node):
-    node.parentNode = self
+    parentNode = node.parentNode
+    if parentNode:
+      parentNode.childNodes.remove(node)
     self.childNodes.append(node)
+    node.parentNode = self
+    return node
 
 
 class Element(Parent):
   def __init__(self, name, xml=False):
     super().__init__(Node.ELEMENT)
     self.attributes = {}
-    self.childNodes = []
     self.name = name
     self.xml = xml
 
@@ -74,6 +94,7 @@ class Element(Parent):
     if len(self.childNodes) > 0:
       html += ">"
       for child in self.childNodes:
+        # TODO: handle <title> and others that don't need/want escaping
         html += str(child)
       html += f"</{self.name}>"
     elif self.xml:
@@ -91,15 +112,6 @@ class Fragment(Parent):
 
   def __str__(self):
     return "".join(str(node) for node in self.childNodes)
-
-
-class DocumentType(Node):
-  def __init__(self, data):
-    super().__init__(Node.DOCUMENT_TYPE)
-    self.data = data
-
-  def __str__(self):
-    return f"<!{self.data}>"
 
 
 class DOMParser(HTMLParser):

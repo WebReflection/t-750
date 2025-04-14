@@ -19,7 +19,6 @@ def as_attribute(attributes, listeners, key, name):
       attributes[f'data-{k.replace("_", "-")}'] = v
 
   def listener(value):
-    del attributes[key]
     if value in listeners:
       i = listeners.index(value)
     else:
@@ -39,25 +38,11 @@ def as_attribute(attributes, listeners, key, name):
 
 
 def as_comment(node):
-  parentNode = node.parentNode
-  childNodes = parentNode.childNodes
-  index = childNodes.index(node)
-  def comment(value):
-    childNodes[index] = as_node(value)
-
-  return comment
+  return lambda value: node.replaceWith(as_node(value))
 
 
 def as_component(updates, node):
-  parentNode = node.parentNode
-  childNodes = parentNode.childNodes
-  index = childNodes.index(node)
-  def component(value):
-    def later():
-      childNodes[index] = value(node.attributes, node.childNodes)
-    updates.append(later)
-
-  return component
+  return lambda value: updates.append(lambda: node.replaceWith(value(node.attributes, node.childNodes)))
 
 
 def as_node(value):
@@ -65,8 +50,8 @@ def as_node(value):
     return value
   if isinstance(value, (list, tuple)):
     node = Fragment()
-    for item in value:
-      node.appendChild(as_node(item))
+    for child in value[:]:
+      node.appendChild(as_node(child))
     return node
   if callable(value):
     # TODO: this could be a hook pleace for asyncio
