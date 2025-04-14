@@ -62,9 +62,14 @@ def set_updates(node, listeners, updates, path):
     if node.name == prefix:
       updates.append(Update(path, Component()))
 
+    remove = []
     for key, name in node.attributes.items():
       if key.startswith(prefix):
-        updates.append(Update(path, Attribute(key, name)))
+        remove.append(key)
+        updates.append(Update(path, Attribute(name)))
+    
+    for key in remove:
+      del node.attributes[key]
 
     i = 0
     for child in node.childNodes:
@@ -76,14 +81,11 @@ def set_updates(node, listeners, updates, path):
 
 
 class Attribute:
-  def __init__(self, key, name):
-    self.key = key
+  def __init__(self, name):
     self.name = name
 
   def __call__(self, node, listeners):
-    attributes = node.attributes
-    del attributes[self.key]
-    return as_attribute(attributes, listeners, self.name)
+    return as_attribute(node.attributes, listeners, self.name)
 
 
 class Comment:
