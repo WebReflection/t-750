@@ -3,27 +3,27 @@ from random import random
 import re
 
 
-prefix = 't🐍' + str(random())[2:5]
+_prefix = 't🐍' + str(random())[2:5]
 
 
-elements = re.compile(
+_elements = re.compile(
   '<(\x01|[a-zA-Z0-9]+[a-zA-Z0-9:._-]*)([^>]*?)(/?)>',
 )
 
-attributes = re.compile(
+_attributes = re.compile(
   r'([^\s\\>\'"=]+)\s*=\s*([\'"]?)' + '\x01',
 )
 
-holes = re.compile(
+_holes = re.compile(
   '[\x01\x02]',
 )
 
 
-def as_attribute(match):
+def _as_attribute(match):
   return f'\x02={match.group(2)}{match.group(1)}'
 
 
-def as_closing(name, xml, self_closing):
+def _as_closing(name, xml, self_closing):
   if len(self_closing) > 0:
     if xml or re.match(VOID_ELEMENTS, name):
       return ' /'
@@ -34,32 +34,32 @@ def as_closing(name, xml, self_closing):
 # \x01 Node.ELEMENT_NODE
 # \x02 Node.ATTRIBUTE_NODE
 
-def instrument(template, prefix, xml):
+def _instrument(template, xml):
   def pin(match):
     name = match.group(1)
     if name == '\x01':
-      name = prefix
+      name = _prefix
     attrs = match.group(2)
     self_closing = match.group(3)
     return f'<{
       name
     }{
-      re.sub(attributes, as_attribute, attrs).rstrip()
+      re.sub(_attributes, _as_attribute, attrs).rstrip()
     }{
-      as_closing(name, xml, self_closing)
+      _as_closing(name, xml, self_closing)
     }>'
 
   def point():
     nonlocal i
     i += 1
-    return prefix + str(i - 1)
+    return _prefix + str(i - 1)
 
   i = 0
   return re.sub(
-    holes,
-    lambda match: f'<!--{prefix}-->' if match.group(0) == '\x01' else point(),
+    _holes,
+    lambda match: f'<!--{_prefix}-->' if match.group(0) == '\x01' else point(),
     re.sub(
-      elements,
+      _elements,
       pin,
       '\x01'.join(template).strip().replace('</>', '<//>')
     )

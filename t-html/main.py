@@ -25,8 +25,6 @@ js.python_listeners = dill.loads(b64decode('{code}'))
 </script>'''
     except Exception as e:
       pass
-  
-  listeners.clear()
 
   return output
 

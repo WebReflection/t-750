@@ -148,41 +148,6 @@ def _replaceWith(current, node):
     current.parent = None
 
 
-# def _str(node):
-#   type = node['type']
-#   if type == FRAGMENT:
-#     return "".join(_str(child) for child in node['children'])
-#   if type == ELEMENT:
-#     name = node['name']
-#     html = f"<{name}"
-#     for key, value in node['props'].items():
-#       if value != None:
-#         if isinstance(value, bool):
-#           if value:
-#             html += f" {key}"
-#         else:
-#           html += f" {key}=\"{escape(str(value))}\""
-#     if len(node['children']) > 0:
-#       html += ">"
-#       for child in node['children']:
-#         # TODO: handle <title> and others that don't need/want escaping
-#         html += str(child)
-#       html += f"</{name}>"
-#     elif node.xml:
-#       html += " />"
-#     else:
-#       html += ">"
-#       if not VOID_ELEMENTS.match(name):
-#         html += "</" + name + ">"
-#     return html
-#   if type == TEXT:
-#     return escape(str(node['data']))
-#   if type == COMMENT:
-#     return f"<!--{escape(str(node['data']))}-->"
-#   if type == DOCUMENT_TYPE:
-#     return f"<!{node['data']}>"
-
-
 
 class DOMParser(HTMLParser):
   def __init__(self, xml=False):

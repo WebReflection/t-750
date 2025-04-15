@@ -1,8 +1,11 @@
-from .utils import Attribute, Comment, parse
-from .dom import _clone
+from .utils import _Attribute, _Comment, _parse
+from .dom import COMMENT, DOCUMENT_TYPE, TEXT, ELEMENT, FRAGMENT
+from .dom import Node, Comment, DocumentType, Text, Element, Fragment, DOMParser, parse, _clone
 
-parsed = {}
-listeners = []
+
+_parsed = {}
+_listeners = []
+
 
 def _util(svg):
   def fn(t):
@@ -14,10 +17,10 @@ def _util(svg):
 
     length = len(values)
 
-    if not template in parsed:
-      parsed[template] = parse(listeners, template, length, svg)
+    if not template in _parsed:
+      _parsed[template] = _parse(_listeners, template, length, svg)
 
-    content, updates = parsed[template]
+    content, updates = _parsed[template]
 
     node = _clone(content)
     changes = []
@@ -32,9 +35,9 @@ def _util(svg):
         for index in path:
           child = child['children'][index]
 
-      if isinstance(update.value, Attribute):
-        changes.append(update.value(child, listeners))
-      elif isinstance(update.value, Comment):
+      if isinstance(update.value, _Attribute):
+        changes.append(update.value(child, _listeners))
+      elif isinstance(update.value, _Comment):
         changes.append(update.value(child))
       else:
         changes.append(update.value(child, changes))
@@ -49,10 +52,19 @@ def _util(svg):
 
   return fn
 
+
 def render(where, what):
-  return where(what() if callable(what) else what, listeners)
+  result = where(what() if callable(what) else what, _listeners)
+  _listeners.clear()
+  return result
 
 html = _util(False)
 svg = _util(True)
 
-__all__ = ["render", "html", "svg"]
+
+__all__ = [
+  "render", "html", "svg",
+  "DOMParser", "parse",
+  "Node", "Comment", "DocumentType", "Text", "Element", "Fragment",
+  "COMMENT", "DOCUMENT_TYPE", "TEXT", "ELEMENT", "FRAGMENT",
+]

@@ -1,19 +1,19 @@
-from .parser import instrument, prefix
+from .parser import _instrument, _prefix
 from .dom import Fragment, Node, Text
 from .dom import COMMENT, ELEMENT, FRAGMENT
 from .dom import _appendChildren, _replaceWith, parse as domify
 
 
 
-def as_comment(node):
-  return lambda value: _replaceWith(node, as_node(value))
+def _as_comment(node):
+  return lambda value: _replaceWith(node, _as_node(value))
 
 
-def as_component(node, components):
+def _as_component(node, components):
   return lambda value: components.append(lambda: _replaceWith(node, value(node['props'], node['children'])))
 
 
-def as_node(value):
+def _as_node(value):
   if isinstance(value, Node):
     return value
   if isinstance(value, (list, tuple)):
@@ -23,11 +23,11 @@ def as_node(value):
   if callable(value):
     # TODO: this could be a hook pleace for asyncio
     #       and run to completion before continuing
-    return as_node(value())
+    return _as_node(value())
   return Text(value)
 
 
-def as_prop(props, listeners, name):
+def _as_prop(props, listeners, name):
   def aria(value):
     for k, v in value.items():
       props[k if k == 'role' else f'aria-{k.lower()}'] = v
@@ -58,18 +58,18 @@ def as_prop(props, listeners, name):
     return attribute
 
 
-def set_updates(node, listeners, updates, path):
+def _set_updates(node, listeners, updates, path):
   type = node['type']
   if type == ELEMENT:
-    if node['name'] == prefix:
-      updates.append(Update(path, Component()))
+    if node['name'] == _prefix:
+      updates.append(_Update(path, _Component()))
 
     remove = []
     props = node['props']
     for key, name in props.items():
-      if key.startswith(prefix):
+      if key.startswith(_prefix):
         remove.append(key)
-        updates.append(Update(path, Attribute(name)))
+        updates.append(_Update(path, _Attribute(name)))
 
     for key in remove:
       del props[key]
@@ -77,48 +77,48 @@ def set_updates(node, listeners, updates, path):
   if type == ELEMENT or type == FRAGMENT:
     i = 0
     for child in node['children']:
-      set_updates(child, listeners, updates, path + [i])
+      _set_updates(child, listeners, updates, path + [i])
       i += 1
 
-  elif type == COMMENT and node['data'] == prefix:
-    updates.append(Update(path, Comment()))
+  elif type == COMMENT and node['data'] == _prefix:
+    updates.append(_Update(path, _Comment()))
 
 
 
-class Attribute:
+class _Attribute:
   def __init__(self, name):
     self.name = name
 
   def __call__(self, node, listeners):
-    return as_prop(node['props'], listeners, self.name)
+    return _as_prop(node['props'], listeners, self.name)
 
 
-class Comment:
+class _Comment:
   def __call__(self, node):
-    return as_comment(node)
+    return _as_comment(node)
 
 
-class Component:
+class _Component:
   def __call__(self, node, updates):
-    return as_component(node, updates)
+    return _as_component(node, updates)
 
 
-class Update:
+class _Update:
   def __init__(self, path, update):
     self.path = path
     self.value = update
 
 
 
-def parse(listeners, template, length, svg):
+def _parse(listeners, template, length, svg):
   updates = []
-  content = instrument(template, prefix, svg)
+  content = _instrument(template, svg)
   fragment = domify(content, svg)
 
   if len(fragment['children']) == 1:
     fragment = fragment['children'][0]
 
-  set_updates(fragment, listeners, updates, [])
+  _set_updates(fragment, listeners, updates, [])
 
   if len(updates) != length:
     raise ValueError(f'{len(updates)} updates found, expected {length}')
