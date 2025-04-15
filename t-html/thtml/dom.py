@@ -1,4 +1,3 @@
-from html.parser import HTMLParser
 from html import escape
 import re
 
@@ -19,10 +18,7 @@ FRAGMENT = 11
 # TODO: style,script,textarea,title,xmp are nodes which content is not escaped
 #       and it cannot contain interpolations right now but these need to be handled
 
-VOID_ELEMENTS = re.compile(
-  r'^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$',
-  re.IGNORECASE
-)
+VOID_ELEMENTS = '|'.split('area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr')
 
 
 
@@ -91,7 +87,7 @@ class Element(Node):
       html += " />"
     else:
       html += ">"
-      if not VOID_ELEMENTS.match(name):
+      if not name in VOID_ELEMENTS:
         html += "</" + name + ">"
     return html
 
@@ -147,41 +143,102 @@ def _replaceWith(current, node):
     node.parent = parent
     current.parent = None
 
+try:
+  from html.parser import HTMLParser
+  class DOMParser(HTMLParser):
+    def __init__(self, xml=False):
+      super().__init__()
+      self.xml = xml
+      self.node = Fragment()
 
+    def handle_starttag(self, tag, attrs):
+      element = Element(tag, self.xml)
+      _append(self.node, element)
+      self.node = element
+      props = element['props']
+      for name, value in attrs:
+        props[name] = value
 
-class DOMParser(HTMLParser):
-  def __init__(self, xml=False):
-    super().__init__()
-    self.xml = xml
-    self.node = Fragment()
+    def handle_endtag(self, tag):
+      parent = self.node.parent
+      if parent:
+        self.node = parent
 
-  def handle_starttag(self, tag, attrs):
-    element = Element(tag, self.xml)
-    _append(self.node, element)
-    self.node = element
-    props = element['props']
-    for name, value in attrs:
-      props[name] = value
+    def handle_data(self, data):
+      _append(self.node, Text(data))
 
-  def handle_endtag(self, tag):
-    parent = self.node.parent
-    if parent:
-      self.node = parent
+    def handle_comment(self, data):
+      if data == '/':
+        self.handle_endtag(self.node['name'])
+      else:
+        _append(self.node, Comment(data))
 
-  def handle_data(self, data):
-    _append(self.node, Text(data))
+    def handle_decl(self, data):
+      _append(self.node, DocumentType(data))
 
-  def handle_comment(self, data):
-    if data == '/':
-      self.handle_endtag(self.node['name'])
-    else:
-      _append(self.node, Comment(data))
+    def unknown_decl(self, data):
+      raise Exception(f"Unknown declaration: {data}")
+except ImportError:
+  from pyscript.js_modules import htmlparser2
+  from pyscript import window
+  Parser = htmlparser2.Parser
+  class DOMParser():
+    def __init__(self, xml=False):
+      self.xml = xml
+      self.node = Fragment()
 
-  def handle_decl(self, data):
-    _append(self.node, DocumentType(data))
+    def feed(self, content):
+      parser = Parser.new(self, {
+        "lowerCaseAttributeNames": False,
+        "decodeEntities": True,
+        "xmlMode": self.xml,
+      })
+      parser.write(content)
+      parser.end()
 
-  def unknown_decl(self, data):
-    raise Exception(f"Unknown declaration: {data}")
+    def onparserinit(self, *args):
+      pass
+    def onopentagname(self, *args):
+      pass
+    def oncommentend(self, *args):
+      pass
+    def oncdatastart(self, *args):
+      pass
+    def oncdataend(self, *args):
+      pass
+    def onattribute(self, *args):
+      pass
+    def onend(self, *args):
+      pass
+
+    def onopentag(self, tag, attrs, *args):
+      element = Element(tag, self.xml)
+      _append(self.node, element)
+      self.node = element
+      props = element['props']
+
+      for name in window.Object.keys(attrs):
+        props[name] = attrs[name]
+
+    def onclosetag(self, *args):
+      parent = self.node.parent
+      if parent:
+        self.node = parent
+
+    def ontext(self, data):
+      _append(self.node, Text(data))
+
+    def oncomment(self, data):
+      if data == '/':
+        self.onclosetag(self.node['name'])
+      else:
+        _append(self.node, Comment(data))
+
+    def onprocessinginstruction(self, name, data):
+      _append(self.node, DocumentType(data))
+
+    def unknown_decl(self, data):
+      raise Exception(f"Unknown declaration: {data}")
 
 
 def parse(content, xml=False):

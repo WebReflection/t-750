@@ -1,0 +1,11 @@
+name = "PEP 750"
+
+[js_modules.main]
+"https://cdn.jsdelivr.net/npm/htmlparser2/+esm" = "htmlparser2"
+
+[files]
+"../thtml/__init__.py" = "./thtml/__init__.py"
+"../thtml/dom.py" = "./thtml/dom.py"
+"../thtml/parser.py" = "./thtml/parser.py"
+"../thtml/utils.py" = "./thtml/utils.py"
+"./t.py" = "./t.py"

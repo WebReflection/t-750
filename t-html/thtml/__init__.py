@@ -9,18 +9,24 @@ _listeners = []
 
 def _util(svg):
   def fn(t):
-    template = t.args[0::2]
-
+    template = []
     values = []
-    for entry in t.args[1::2]:
-      values.append(entry.value)
+    i = 0
+    for arg in t.args:
+      if i % 2:
+        values.append(arg.value)
+      else:
+        template.append(arg)
+      i += 1
 
     length = len(values)
 
-    if not template in _parsed:
-      _parsed[template] = _parse(_listeners, template, length, svg)
+    hash = '\x01'.join(template)
 
-    content, updates = _parsed[template]
+    if not hash in _parsed:
+      _parsed[hash] = _parse(_listeners, template, length, svg)
+
+    content, updates = _parsed[hash]
 
     node = _clone(content)
     changes = []

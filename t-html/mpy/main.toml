@@ -1,0 +1,5 @@
+name = "PEP 750"
+
+[files]
+"../thtml.zip" = "./*"
+"./t.py" = "./t.py"

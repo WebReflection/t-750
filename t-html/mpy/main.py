@@ -2,6 +2,8 @@ from thtml import render, html, svg
 from random import random
 from json import dumps
 
+from t import t
+
 def passthrough(value, listeners):
   try:
     import js
@@ -12,20 +14,6 @@ def passthrough(value, listeners):
   output = str(value)
   print(output)
 
-  if len(listeners) > 0:
-    from base64 import b64encode
-    try:
-      import dill
-      code = b64encode(dill.dumps(listeners)).decode('utf-8')
-      output += f'''<script type="py">
-from base64 import b64decode
-import dill
-import js
-js.python_listeners = dill.loads(b64decode('{code}'))
-</script>'''
-    except Exception as e:
-      pass
-
   return output
 
 
@@ -33,24 +21,38 @@ data = {"a": 1, "b": 2}
 aria = {"role": "button", "label": "Click me"}
 names = ["John", "Jane", "Jim", "Jill"]
 
+globals()["data"] = data
+globals()["aria"] = aria
+globals()["names"] = names
 
 # listener example
 def on_click(event):
   import js
   js.alert(event.type)
 
+globals()["on_click"] = on_click
 
 # Component example
 def Component(props, children):
-  return html(t'''
+  globals()["props"] = props
+  globals()["children"] = children
+  return html(t('''
     <div a={props['a']} b={props['b']}>
       {children}
     </div>
-  ''')
+  '''))
 
+globals()["Component"] = Component
+
+
+def li(name):
+  globals()["name"] = name
+  return html(t("<li>{name}</li>"))
+
+globals()["li"] = li
 
 # SSR example
-content = render(passthrough, html(t'''
+content = render(passthrough, html(t('''
   <div>
     <!-- boolean attributes hints: try with True -->
     <h1 hidden={False}>Hello, PEP750 SSR!</h1>
@@ -67,20 +69,18 @@ content = render(passthrough, html(t'''
     <hr />
     <svg>
       <!-- preseved XML/SVG self closing nature -->
-      {svg(t'<rect width="200" height="100" rx="20" ry="20" fill="blue" />')}
+      {svg(t('<rect width="200" height="100" rx="20" ry="20" fill="blue" />'))}
     </svg>
     <!-- components -->
     <{Component} a="1" b={2}>
       <p>Hello Components!</p>
-      <p>Hello Components!</p>
-      <p>Hello Components!</p>
     <//>
     <ul>
       <!-- lists within parts of the layout -->
-      {[html(t"<li>{name}</li>") for name in names]}
+      {[li(name) for name in names]}
     </ul>
   </div>
-'''))
+''')))
 
 try:
   from js import document
