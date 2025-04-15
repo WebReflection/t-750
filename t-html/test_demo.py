@@ -1,7 +1,6 @@
 """Cover the examples in Andrea's demo."""
 
 from thtml import html, svg
-from thtml.dom import Element, DocumentType
 
 
 def test_automatic_quotes():
@@ -31,13 +30,6 @@ def test_special_attributes():
     data = {"a": 1, "b": 2}
     aria = {"role": "button", "label": "Click me"}
     fragment = html(t"<div data={data} aria={aria} />")
-    div: Element = fragment.nodes[0]
-    assert div.attributes == {
-        "aria-label": "Click me",
-        "data-a": 1,
-        "data-b": 2,
-        "role": "button",
-    }
     assert (
         str(fragment)
         == '<div data-a="1" data-b="2" role="button" aria-label="Click me"></div>'
@@ -53,13 +45,9 @@ def test_click_handler():
         js.alert(event.type)
 
     fragment = html(t"<div @click={on_click} />")
-    div: Element = fragment.nodes[0]
-    assert div.attributes == {
-        "onclick": "self.python_listeners?.[0].call(this,event)",
-    }
     assert (
         str(fragment)
-        == '<div onclick="self.python_listeners?.[0].call(this,event)"></div>'
+        == '<div onclick="self.python_listeners?.[0](event)"></div>'
     )
 
 

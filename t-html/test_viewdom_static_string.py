@@ -5,7 +5,6 @@ Port the code from viewdom.examples.static_string.
 import pytest
 
 from thtml import html
-from thtml.dom import Element, DocumentType
 
 
 def test_string_literal():
@@ -17,9 +16,6 @@ def test_string_literal():
 def test_simple_render():
     """Same thing, but in a `<div> with attributes`."""
     fragment = html(t'<div title="Greeting">Hello World</div>')
-    div: Element = fragment.nodes[0]
-    assert div.name == "div"
-    assert div.attributes == {"title": "Greeting"}
     assert str(fragment) == '<div title="Greeting">Hello World</div>'
 
 
@@ -34,41 +30,29 @@ def test_attribute_value_expression():
     """Pass in a Python symbol as part of the template, inside curly braces."""
     klass = "container1"
     fragment = html(t"<div class={klass}>Hello World</div>")
-    div = fragment.nodes[0]
-    assert div.attributes == {"class": "container1"}
+    assert str(fragment) == '<div class="container1">Hello World</div>'
 
 
 @pytest.mark.xfail(raises=ValueError)
 def test_expressions_in_attribute_value():
     """Simple Python expression inside an attribute value."""
     fragment = html(t'<div class="container{1}">Hello World</div>')
-    div = fragment.nodes[0]
-    assert div.attributes == {"class": "container1"}
+    assert str(fragment) == {"class": "container1"}
 
 
 def test_child_nodes():
     """Nested markup shows up as nodes."""
     fragment = html(t"<div>Hello <span>World<em>!</em></span></div>")
-    div: Element = fragment.nodes[0]
-    span: Element = div.nodes[1]
-    assert span.name == "span"
-    assert str(span) == "<span>World<em>!</em></span>"
-    em = span.nodes[1]
-    assert em.name == "em"
-    assert str(em) == "<em>!</em>"
+    assert str(fragment) == "<div>Hello <span>World<em>!</em></span></div>"
 
 
 def test_doctype():
     """Sometimes it is hard to get a DOCTYPE in to the resulting output."""
     fragment = html(t"<!DOCTYPE html>\n<div>Hello World</div>")
-    doctype = fragment.nodes[0]
-    assert isinstance(doctype, DocumentType)
     assert str(fragment) == "<!DOCTYPE html>\n<div>Hello World</div>"
 
 
 def test_reducing_boolean():
     """collapse truthy-y values into simplified HTML attributes."""
     fragment = html(t"<div editable={True}>Hello World</div>")
-    div: Element = fragment.nodes[0]
-    assert div.attributes == {"editable": True}
     assert str(fragment) == "<div editable>Hello World</div>"
