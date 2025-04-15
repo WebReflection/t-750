@@ -1,6 +1,20 @@
 from html.parser import HTMLParser
-from html import escape, unescape
+from html import escape
 import re
+
+
+ELEMENT = 1
+ATTRIBUTE = 2
+TEXT = 3
+CDATA = 4
+# ENTITY_REFERENCE = 5
+# ENTITY = 6
+# PROCESSING_INSTRUCTION = 7
+COMMENT = 8
+# DOCUMENT = 9
+DOCUMENT_TYPE = 10
+FRAGMENT = 11
+# NOTATION = 12
 
 # TODO: style,script,textarea,title,xmp are nodes which content is not escaped
 #       and it cannot contain interpolations right now but these need to be handled
@@ -11,134 +25,163 @@ VOID_ELEMENTS = re.compile(
 )
 
 
-class Node:
-  ELEMENT = 1
-  ATTRIBUTE = 2
-  TEXT = 3
-  CDATA = 4
-  # ENTITY_REFERENCE = 5
-  # ENTITY = 6
-  # PROCESSING_INSTRUCTION = 7
-  COMMENT = 8
-  # DOCUMENT = 9
-  DOCUMENT_TYPE = 10
-  FRAGMENT = 11
-  # NOTATION = 12
 
-  def __init__(self, nodeType):
-    self.nodeType = nodeType
-    self.parentNode = None
+class Node(dict):
+  def __init__(self, **kwargs):
+    super().__init__(type=self.type, **kwargs)
+    self.parent = None
 
-  def replaceWith(self, node):
-    parentNode = self.parentNode
-    index = parentNode.childNodes.index(self)
-    parentNode.childNodes[index] = node
-    node.parentNode = parentNode
-    self.parentNode = None
+  def __getattribute__(self, name):
+    return self[name] if name in self else super().__getattribute__(name)
 
 
 class Comment(Node):
+  type = COMMENT
+
   def __init__(self, data):
-    super().__init__(Node.COMMENT)
-    self.data = data
+    super().__init__(data=data)
 
   def __str__(self):
-    return f"<!--{escape(str(self.data))}-->"
-
-  def cloneNode(self, deep=False):
-    return Comment(self.data)
+    return f"<!--{escape(str(self['data']))}-->"
 
 
 class DocumentType(Node):
+  type = DOCUMENT_TYPE
+
   def __init__(self, data):
-    super().__init__(Node.DOCUMENT_TYPE)
-    self.data = data
+    super().__init__(data=data)
 
   def __str__(self):
-    return f"<!{self.data}>"
-
-  def cloneNode(self, deep=False):
-    return DocumentType(self.data)
+    return f"<!{self['data']}>"
 
 
 class Text(Node):
+  type = TEXT
+
   def __init__(self, data):
-    super().__init__(Node.TEXT)
-    self.data = data
+    super().__init__(data=data)
 
   def __str__(self):
-    return escape(str(self.data))
-
-  def cloneNode(self, deep=False):
-    return Text(self.data)
+    return escape(str(self['data']))
 
 
-class Parent(Node):
-  def __init__(self, nodeType):
-    super().__init__(nodeType)
-    self.childNodes = []
+class Element(Node):
+  type = ELEMENT
 
-  def appendChild(self, node):
-    self.childNodes.append(node)
-    node.parentNode = self
-    return node
-
-  def replaceChildren(self, *nodes):
-    for node in nodes:
-      self.childNodes.append(node)
-      node.parentNode = self
-
-
-class Element(Parent):
   def __init__(self, name, xml=False):
-    super().__init__(Node.ELEMENT)
-    self.attributes = {}
-    self.name = name
-    self.xml = xml
+    super().__init__(name=name, xml=xml, props={}, children=[])
 
   def __str__(self):
-    html = f"<{self.name}"
-    for key, value in self.attributes.items():
+    name = self['name']
+    html = f"<{name}"
+    for key, value in self['props'].items():
       if value != None:
         if isinstance(value, bool):
           if value:
             html += f" {key}"
         else:
           html += f" {key}=\"{escape(str(value))}\""
-    if len(self.childNodes) > 0:
+    if len(self['children']) > 0:
       html += ">"
-      for child in self.childNodes:
+      for child in self['children']:
         # TODO: handle <title> and others that don't need/want escaping
         html += str(child)
-      html += f"</{self.name}>"
-    elif self.xml:
+      html += f"</{name}>"
+    elif self['xml']:
       html += " />"
     else:
       html += ">"
-      if not VOID_ELEMENTS.match(self.name):
-        html += "</" + self.name + ">"
+      if not VOID_ELEMENTS.match(name):
+        html += "</" + name + ">"
     return html
 
-  def cloneNode(self, deep=False):
-    element = Element(self.name, self.xml)
-    element.attributes = self.attributes.copy()
-    if deep:
-      element.replaceChildren(*[child.cloneNode(deep) for child in self.childNodes])
-    return element
 
+class Fragment(Node):
+  type = FRAGMENT
 
-class Fragment(Parent):
   def __init__(self):
-    super().__init__(Node.FRAGMENT)
+    super().__init__(children=[])
 
   def __str__(self):
-    return "".join(str(node) for node in self.childNodes)
+    return "".join(str(child) for child in self['children'])
 
-  def cloneNode(self, deep=False):
+
+
+def _append(parent, node):
+  parent['children'].append(node)
+  node.parent = parent
+
+
+def _appendChildren(parent, nodes, clone=False):
+  children = parent['children']
+  for node in nodes:
+    if clone:
+      node = _clone(node)
+    children.append(node)
+    node.parent = parent
+
+
+def _clone(node):
+  type = node['type']
+  if type == FRAGMENT:
     fragment = Fragment()
-    if deep:
-      fragment.replaceChildren(*[child.cloneNode(deep) for child in self.childNodes])
+    _appendChildren(fragment, node['children'], True)
     return fragment
+  if type == ELEMENT:
+    element = Element(node['name'], node['xml'])
+    element['props'] = node['props'].copy()
+    _appendChildren(element, node['children'], True)
+    return element
+  if type == TEXT:
+    return Text(node['data'])
+  if type == COMMENT:
+    return Comment(node['data'])
+  if type == DOCUMENT_TYPE:
+    return DocumentType(node['data'])
+
+
+def _replaceWith(current, node):
+    parent = current.parent
+    children = parent['children']
+    children[children.index(current)] = node
+    node.parent = parent
+    current.parent = None
+
+
+# def _str(node):
+#   type = node['type']
+#   if type == FRAGMENT:
+#     return "".join(_str(child) for child in node['children'])
+#   if type == ELEMENT:
+#     name = node['name']
+#     html = f"<{name}"
+#     for key, value in node['props'].items():
+#       if value != None:
+#         if isinstance(value, bool):
+#           if value:
+#             html += f" {key}"
+#         else:
+#           html += f" {key}=\"{escape(str(value))}\""
+#     if len(node['children']) > 0:
+#       html += ">"
+#       for child in node['children']:
+#         # TODO: handle <title> and others that don't need/want escaping
+#         html += str(child)
+#       html += f"</{name}>"
+#     elif node.xml:
+#       html += " />"
+#     else:
+#       html += ">"
+#       if not VOID_ELEMENTS.match(name):
+#         html += "</" + name + ">"
+#     return html
+#   if type == TEXT:
+#     return escape(str(node['data']))
+#   if type == COMMENT:
+#     return f"<!--{escape(str(node['data']))}-->"
+#   if type == DOCUMENT_TYPE:
+#     return f"<!{node['data']}>"
+
 
 
 class DOMParser(HTMLParser):
@@ -149,27 +192,28 @@ class DOMParser(HTMLParser):
 
   def handle_starttag(self, tag, attrs):
     element = Element(tag, self.xml)
-    self.node.appendChild(element)
+    _append(self.node, element)
     self.node = element
+    props = element['props']
     for name, value in attrs:
-      element.attributes[name] = value
+      props[name] = value
 
   def handle_endtag(self, tag):
-    parentNode = self.node.parentNode
-    if parentNode:
-      self.node = parentNode
+    parent = self.node.parent
+    if parent:
+      self.node = parent
 
   def handle_data(self, data):
-    self.node.appendChild(Text(data))
+    _append(self.node, Text(data))
 
   def handle_comment(self, data):
     if data == '/':
-      self.handle_endtag(self.node.name)
+      self.handle_endtag(self.node['name'])
     else:
-      self.node.appendChild(Comment(data))
+      _append(self.node, Comment(data))
 
   def handle_decl(self, data):
-    self.node.appendChild(DocumentType(data))
+    _append(self.node, DocumentType(data))
 
   def unknown_decl(self, data):
     raise Exception(f"Unknown declaration: {data}")

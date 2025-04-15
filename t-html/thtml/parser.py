@@ -1,12 +1,10 @@
-import re
+from .dom import VOID_ELEMENTS
 from random import random
+import re
 
-VOID_ELEMENTS = re.compile(
-  r'^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$',
-  re.IGNORECASE
-)
 
 prefix = 't🐍' + str(random())[2:5]
+
 
 elements = re.compile(
   '<(\x01|[a-zA-Z0-9]+[a-zA-Z0-9:._-]*)([^>]*?)(/?)>',
@@ -20,14 +18,16 @@ holes = re.compile(
   '[\x01\x02]',
 )
 
+
 def as_attribute(match):
   return f'\x02={match.group(2)}{match.group(1)}'
 
+
 def as_closing(name, xml, self_closing):
   if len(self_closing) > 0:
-    if xml:
+    if xml or re.match(VOID_ELEMENTS, name):
       return ' /'
-    if not re.match(VOID_ELEMENTS, name):
+    else:
       return f'></{name}'
   return ''
 

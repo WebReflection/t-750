@@ -1,4 +1,5 @@
-from .utils import Attribute, Comment, Component, parse
+from .utils import Attribute, Comment, parse
+from .dom import _clone
 
 parsed = {}
 listeners = []
@@ -18,7 +19,7 @@ def _util(svg):
 
     content, updates = parsed[template]
 
-    node = content.cloneNode(True)
+    node = _clone(content)
     changes = []
     path = None
     child = None
@@ -29,7 +30,7 @@ def _util(svg):
         path = update.path
         child = node
         for index in path:
-          child = child.childNodes[index]
+          child = child['children'][index]
 
       if isinstance(update.value, Attribute):
         changes.append(update.value(child, listeners))
