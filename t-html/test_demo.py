@@ -90,7 +90,6 @@ def test_component():
     """
     )
 
-    component = fragment.nodes[0]
     assert "<p>Hello Components!</p" in str(component)
 
 
