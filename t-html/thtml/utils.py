@@ -1,6 +1,6 @@
 from .parser import instrument, prefix
-from .dom import Node, Text, Fragment
-from .dom import ELEMENT, COMMENT
+from .dom import Fragment, Node, Text
+from .dom import COMMENT, ELEMENT, FRAGMENT
 from .dom import _appendChildren, _replaceWith, parse as domify
 
 
@@ -59,7 +59,8 @@ def as_prop(props, listeners, name):
 
 
 def set_updates(node, listeners, updates, path):
-  if node['type'] == ELEMENT:
+  type = node['type']
+  if type == ELEMENT:
     if node['name'] == prefix:
       updates.append(Update(path, Component()))
 
@@ -73,13 +74,15 @@ def set_updates(node, listeners, updates, path):
     for key in remove:
       del props[key]
 
+  if type == ELEMENT or type == FRAGMENT:
     i = 0
     for child in node['children']:
       set_updates(child, listeners, updates, path + [i])
       i += 1
 
-  elif node['type'] == COMMENT and node['data'] == prefix:
+  elif type == COMMENT and node['data'] == prefix:
     updates.append(Update(path, Comment()))
+
 
 
 class Attribute:
@@ -106,15 +109,16 @@ class Update:
     self.value = update
 
 
+
 def parse(listeners, template, length, svg):
   updates = []
   content = instrument(template, prefix, svg)
   fragment = domify(content, svg)
 
-  i = 0
-  for node in fragment['children']:
-    set_updates(node, listeners, updates, [i])
-    i += 1
+  if len(fragment['children']) == 1:
+    fragment = fragment['children'][0]
+
+  set_updates(fragment, listeners, updates, [])
 
   if len(updates) != length:
     raise ValueError(f'{len(updates)} updates found, expected {length}')
