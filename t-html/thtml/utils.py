@@ -1,19 +1,43 @@
 from .parser import instrument, prefix
-from .dom import Node, Text, Fragment, parse as domify
+from .dom import Node, Text, Fragment
+from .dom import ELEMENT, COMMENT
+from .dom import _appendChildren, _replaceWith, parse as domify
 
 
-def as_attribute(attributes, listeners, name):
+
+def as_comment(node):
+  return lambda value: _replaceWith(node, as_node(value))
+
+
+def as_component(node, components):
+  return lambda value: components.append(lambda: _replaceWith(node, value(node['props'], node['children'])))
+
+
+def as_node(value):
+  if isinstance(value, Node):
+    return value
+  if isinstance(value, (list, tuple)):
+    node = Fragment()
+    _appendChildren(node, value)
+    return node
+  if callable(value):
+    # TODO: this could be a hook pleace for asyncio
+    #       and run to completion before continuing
+    return as_node(value())
+  return Text(value)
+
+
+def as_prop(props, listeners, name):
   def aria(value):
     for k, v in value.items():
-      attributes[k if k == 'role' else f'aria-{k.lower()}'] = v
+      props[k if k == 'role' else f'aria-{k.lower()}'] = v
 
   def attribute(value):
-    attributes[name] = value
+    props[name] = value
 
   def dataset(value):
-    values = []
     for k, v in value.items():
-      attributes[f'data-{k.replace("_", "-")}'] = v
+      props[f'data-{k.replace("_", "-")}'] = v
 
   def listener(value):
     if value in listeners:
@@ -21,7 +45,7 @@ def as_attribute(attributes, listeners, name):
     else:
       i = len(listeners)
       listeners.append(value)
-    attributes[name] = f'self.python_listeners?.[{i}](event)'
+    props[name] = f'self.python_listeners?.[{i}](event)'
 
   if name[0] == '@':
     name = 'on' + name[1:].lower()
@@ -34,49 +58,27 @@ def as_attribute(attributes, listeners, name):
     return attribute
 
 
-def as_comment(node):
-  return lambda value: node.replaceWith(as_node(value))
-
-
-def as_component(node, components):
-  return lambda value: components.append(lambda: node.replaceWith(value(node.attributes, node.childNodes)))
-
-
-def as_node(value):
-  if isinstance(value, Node):
-    return value
-  if isinstance(value, (list, tuple)):
-    node = Fragment()
-    node.replaceChildren(*value)
-    value.clear()
-    return node
-  if callable(value):
-    # TODO: this could be a hook pleace for asyncio
-    #       and run to completion before continuing
-    return as_node(value())
-  return Text(value)
-
-
 def set_updates(node, listeners, updates, path):
-  if node.nodeType == node.ELEMENT:
-    if node.name == prefix:
+  if node['type'] == ELEMENT:
+    if node['name'] == prefix:
       updates.append(Update(path, Component()))
 
     remove = []
-    for key, name in node.attributes.items():
+    props = node['props']
+    for key, name in props.items():
       if key.startswith(prefix):
         remove.append(key)
         updates.append(Update(path, Attribute(name)))
-    
+
     for key in remove:
-      del node.attributes[key]
+      del props[key]
 
     i = 0
-    for child in node.childNodes:
+    for child in node['children']:
       set_updates(child, listeners, updates, path + [i])
       i += 1
 
-  elif node.nodeType == node.COMMENT and node.data == prefix:
+  elif node['type'] == COMMENT and node['data'] == prefix:
     updates.append(Update(path, Comment()))
 
 
@@ -85,7 +87,7 @@ class Attribute:
     self.name = name
 
   def __call__(self, node, listeners):
-    return as_attribute(node.attributes, listeners, self.name)
+    return as_prop(node['props'], listeners, self.name)
 
 
 class Comment:
@@ -110,7 +112,7 @@ def parse(listeners, template, length, svg):
   fragment = domify(content, svg)
 
   i = 0
-  for node in fragment.childNodes:
+  for node in fragment['children']:
     set_updates(node, listeners, updates, [i])
     i += 1
 

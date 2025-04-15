@@ -1,10 +1,17 @@
 from thtml import render, html, svg
 from random import random
-
+from json import dumps
 
 def passthrough(value, listeners):
-  print(str(value))
+  try:
+    import js
+    js.console.log(js.JSON.parse(dumps(value)))
+  except Exception as e:
+    pass
+
   output = str(value)
+  print(output)
+
   if len(listeners) > 0:
     from base64 import b64encode
     try:
