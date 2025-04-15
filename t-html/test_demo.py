@@ -45,10 +45,7 @@ def test_click_handler():
         js.alert(event.type)
 
     fragment = html(t"<div @click={on_click} />")
-    assert (
-        str(fragment)
-        == '<div onclick="self.python_listeners?.[0](event)"></div>'
-    )
+    assert str(fragment) == '<div onclick="self.python_listeners?.[0](event)"></div>'
 
 
 def test_ignore_voided():
@@ -77,30 +74,37 @@ def test_component():
     """Render a t-string that references a component."""
 
     def Component(props, children):
-        return html(t"""
+        return html(
+            t"""
                     <div a={props['a']} b={props['b']}>
                       {children}
                     </div>
-                  """)
+                  """
+        )
 
-    fragment = html(t'''
+    fragment = html(
+        t"""
 <{Component} a="1" b={2}>
   <p>Hello Components!</p>
 <//>    
-    ''')
+    """
+    )
 
     component = fragment.nodes[0]
     assert "<p>Hello Components!</p" in str(component)
+
 
 def test_lists_within_layout():
     """A template in a template."""
 
     names = ["John", "Jane", "Jill"]
-    fragment = html(t'''
+    fragment = html(
+        t"""
     <ul>
       {[html(t"<li>{name}</li>") for name in names]}
     </ul>
-    ''')
+    """
+    )
 
     assert "<li>John</li>" in str(fragment)
     assert "<li>Jane</li>" in str(fragment)

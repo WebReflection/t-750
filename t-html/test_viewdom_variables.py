@@ -6,9 +6,11 @@ import pytest
 
 from thtml import html
 
-@pytest.fixture(scope='module')
+
+@pytest.fixture(scope="module")
 def fixture_name():
     return "Fixture Name"
+
 
 def test_insert_variable():
     """Template is in a function, and `name` comes from that scope."""
@@ -16,14 +18,15 @@ def test_insert_variable():
     fragment = html(t"<div>Hello {name}</div>")
     assert str(fragment) == "<div>Hello World</div>"
 
+
 def test_from_import():
     """A symbol is imported from another module."""
     name = pytest.__name__
     fragment = html(t"<div>Hello {name}</div>")
     assert str(fragment) == "<div>Hello pytest</div>"
 
+
 def test_from_function_arg(fixture_name):
     """A symbol is passed into a function."""
     fragment = html(t"<div>Hello {fixture_name}</div>")
     assert str(fragment) == "<div>Hello Fixture Name</div>"
-
